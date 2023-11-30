@@ -1,5 +1,4 @@
 from pacai.agents.capture.reflex import ReflexCaptureAgent
-from pacai.core import directions
 from pacai.core.directions import Directions
 
 class MiniMaxAgent(ReflexCaptureAgent):
@@ -23,9 +22,9 @@ class MiniMaxAgent(ReflexCaptureAgent):
         def get_max(gameState, depth, agent, alpha, beta):
             legalMoves = gameState.getLegalActions(agentIndex=agent)
             resultValue = float("-inf")
-            resultAction = directions.Directions.STOP
+            resultAction = Directions.STOP
             for action in legalMoves:
-                if action == directions.Directions.STOP:
+                if action == Directions.STOP:
                     continue
                 successor = gameState.generateSuccessor(agent, action)
                 # Pass -1 to make sure all opponent indices are available
@@ -43,10 +42,10 @@ class MiniMaxAgent(ReflexCaptureAgent):
         def get_min(gameState, depth, agent, alpha, beta):
             legalMoves = gameState.getLegalActions(agentIndex=agent)
             resultValue = float("inf")
-            resultAction = directions.Directions.STOP
+            resultAction = Directions.STOP
             
             for action in legalMoves:
-                if action == directions.Directions.STOP:
+                if action == Directions.STOP:
                     continue
                 successor = gameState.generateSuccessor(agent, action)
                 nextAgent = self.getNextAgent(gameState, agent)
@@ -61,7 +60,7 @@ class MiniMaxAgent(ReflexCaptureAgent):
 
         def mini_max(gameState, depth, agent, alpha, beta):
             if gameState.isOver() or depth >= self.maxDepth:
-                return self.evaluate(gameState, directions.Directions.STOP), directions.Directions.STOP
+                return self.evaluate(gameState, Directions.STOP), Directions.STOP
             
             if agent == self.index:
                 return get_max(gameState, depth, agent, alpha, beta)
@@ -82,8 +81,6 @@ class OffenseAgent(MiniMaxAgent):
         features = {}
         if gameState.isOver():
             return features
-        if gameState.isOver():
-            return features
         successor = self.getSuccessor(gameState, action)
         features['successorScore'] = self.getScore(successor)
 
@@ -95,21 +92,6 @@ class OffenseAgent(MiniMaxAgent):
             myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             features['distanceToFood'] = minDistance
-
-            opponents = [gameState.getAgentState(opponent) for opponent in self.getOpponents(gameState)] 
-            enemyGhosts = [opponent.getPosition() for opponent in opponents if not opponent.isPacman()]
-            if successor.getAgentState(self.index).isPacman() and enemyGhosts:
-                closestGhostDistance = float("inf")
-                if enemyGhosts:
-                    closestGhostDistance = min([self.getMazeDistance(enemyGhost, myPos) for enemyGhost in enemyGhosts])
-                if closestGhostDistance == 0:
-                    features['distanceToGhost'] = 500
-                if closestGhostDistance == 1:
-                    features['distanceToGhost'] = 50
-                elif closestGhostDistance >= 2 and closestGhostDistance <= 5:
-                    features['distanceToGhost'] = 5 - closestGhostDistance
-                else:
-                    features['distanceToGhost'] = 0
 
         return features
 
@@ -125,9 +107,11 @@ class DefenseAgent(MiniMaxAgent):
     def __init__(self, index, depth, **kwargs):
         super().__init__(index, depth)
 
-
     def getFeatures(self, gameState, action):
         features = {}
+
+        if gameState.isOver():
+            return features
 
         successor = self.getSuccessor(gameState, action)
         myState = successor.getAgentState(self.index)
@@ -174,9 +158,9 @@ def createTeam(firstIndex, secondIndex, isRed,
     initialized using firstIndex and secondIndex as their agent indexed.
     isRed is True if the red team is being created,
     and will be False if the blue team is being created.
-    """ 
+    """
 
     return [
-        OffenseAgent(firstIndex, 4),
-        DefenseAgent(secondIndex, 4),
+        OffenseAgent(firstIndex, 3),
+        DefenseAgent(secondIndex, 3),
     ]
