@@ -87,21 +87,39 @@ class OffenseAgent(MiniMaxAgent):
         # Compute distance to the nearest food.
         foodList = self.getFood(successor).asList()
 
+        myPos = successor.getAgentState(self.index).getPosition()
         # This should always be True, but better safe than sorry.
         if (len(foodList) > 0):
-            myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             features['distanceToFood'] = minDistance
+
+        # Take closest enemy ghost into account
+        opponents = [successor.getAgentState(opp) for opp in self.getOpponents(successor)]
+        oppGhosts = [opp for opp in opponents if opp.isGhost() and opp.getPosition() is not None]
+        distToGhosts = [self.getMazeDistance(myPos, opp.getPosition()) for opp in oppGhosts]
+        if distToGhosts:
+            features["distanceToGhost"] = min(distToGhosts)
+
+            # Prioritize capsules and survival when we're in danger
+            if min(distToGhosts) <= 2:
+                capsules = successor.getCapsules()
+                if len(capsules) > 0:
+                    capsuleDists = [self.getMazeDistance(myPos, cap) for cap in capsules]
+                    features['distanceToCapsule'] = min(capsuleDists)
+            
+                if len(successor.getLegalActions(self.index)) <= 2:
+                    features["deadEnd"] = 1
 
         return features
 
     def getWeights(self, gameState, action):
         return {
             'successorScore': 100,
-            'distanceToFood': -1,
-            'distanceToGhost': -1
+            'distanceToFood': -2,
+            'distanceToGhost': 1,
+            'distanceToCapsule': -20,
+            'deadEnd': -50
         }
-
 
 class DefenseAgent(MiniMaxAgent):
     def __init__(self, index, depth, **kwargs):
@@ -130,6 +148,12 @@ class DefenseAgent(MiniMaxAgent):
         if (len(invaders) > 0):
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
             features['invaderDistance'] = min(dists)
+        else:
+            # Get distance of potential invaders
+            eGhosts = [o for o in enemies if not o.isPacman() and o.getPosition() is not None]
+            if eGhosts:
+                eGhostsDist = [self.getMazeDistance(myPos, o.getPosition()) for o in eGhosts]
+                features['ghostDistance'] = min(eGhostsDist)
 
         if (action == Directions.STOP):
             features['stop'] = 1
@@ -144,9 +168,10 @@ class DefenseAgent(MiniMaxAgent):
         return {
             'numInvaders': -1000,
             'onDefense': 100,
-            'invaderDistance': -10,
+            'invaderDistance': -100,
             'stop': -100,
-            'reverse': -2
+            'reverse': -2,
+            'ghostDistance': -5
         }
 
 
